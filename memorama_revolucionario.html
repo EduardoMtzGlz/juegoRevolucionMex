@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memorama de la Revolución Mexicana</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #1a0f0a;
+            background-image: radial-gradient(#3d2314 1px, transparent 1px), radial-gradient(#2a170c 1px, #1a0f0a 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: #f3e5d8;
+            min-height: 100vh;
+        }
+
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+
+        /* 3D Card Flip CSS */
+        .card-perspective {
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-inner.is-matched {
+            transform: rotateY(180deg);
+            animation: pulse-matched 0.6s ease-in-out;
+        }
+
+        @keyframes pulse-matched {
+            0% { transform: rotateY(180deg) scale(1); }
+            50% { transform: rotateY(180deg) scale(1.08); }
+            100% { transform: rotateY(180deg) scale(1); }
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(217, 119, 6, 0.3);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #3b1d11 0%, #1f0d06 100%);
+            border: 3px solid #b45309;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            transform: rotateY(180deg);
+            border: 3px solid #d97706;
+            color: #451a03;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a0f0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b45309;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d97706;
+        }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen justify-between overflow-x-hidden select-none">
+
+    <!-- Header Section -->
+    <header class="w-full bg-gradient-to-b from-stone-900 to-amber-950/80 border-b-2 border-amber-600/40 px-4 py-4 shadow-2xl">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 text-center md:text-left">
+                <div class="w-12 h-12 rounded-full bg-amber-600 border-2 border-amber-300 flex items-center justify-center text-stone-900 text-2xl shadow-lg font-bold">
+                    <i class="fa-solid fa-hat-cowboy"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold font-cinzel text-amber-400 tracking-wider">
+                        MEMORAMA REVOLUCIONARIO
+                    </h1>
+                    <p class="text-xs text-amber-200/80 font-medium">1910 - Héroes y Protagonistas de la Revolución Mexicana</p>
+                </div>
+            </div>
+
+            <!-- Top Action Controls -->
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <button id="btn-codex" class="bg-amber-800/80 hover:bg-amber-700 text-amber-100 px-3 py-2 rounded-lg text-sm font-semibold transition border border-amber-500/50 flex items-center gap-2 shadow">
+                    <i class="fa-solid fa-book-open"></i>
+                    <span>Galería Histórica</span>
+                </button>
+                <button id="btn-sound" class="bg-stone-800 hover:bg-stone-700 text-amber-300 p-2.5 rounded-lg text-sm font-semibold transition border border-stone-600 shadow" title="Alternar Sonido">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-6 flex flex-col items-center">
+        
+        <!-- Game Controls & Stats Bar -->
+        <div class="w-full bg-stone-900/90 border border-amber-700/50 rounded-2xl p-4 mb-6 shadow-xl backdrop-blur-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            
+            <!-- Difficulty Selector -->
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-bold text-amber-400 uppercase tracking-wider">Dificultad:</label>
+                <div class="inline-flex rounded-lg bg-stone-950 p-1 border border-amber-900/60">
+                    <button data-diff="easy" class="diff-btn px-3 py-1 rounded-md text-xs font-bold transition text-amber-200 hover:text-white">Fácil (12)</button>
+                    <button data-diff="medium" class="diff-btn px-3 py-1 rounded-md text-xs font-bold transition bg-amber-600 text-stone-950 shadow">Medio (16)</button>
+                    <button data-diff="hard" class="diff-btn px-3 py-1 rounded-md text-xs font-bold transition text-amber-200 hover:text-white">Difícil (20)</button>
+                </div>
+            </div>
+
+            <!-- Score & Stats Displays -->
+            <div class="flex items-center gap-6">
+                <!-- Moves Counter -->
+                <div class="flex items-center gap-2 bg-stone-950/80 px-4 py-1.5 rounded-xl border border-amber-800/40">
+                    <i class="fa-solid fa-hand-pointer text-amber-500"></i>
+                    <div class="text-center">
+                        <span class="block text-[10px] uppercase font-bold text-amber-400/80">Movimientos</span>
+                        <span id="moves-count" class="text-lg font-bold font-mono text-amber-200">0</span>
+                    </div>
+                </div>
+
+                <!-- Matches Counter -->
+                <div class="flex items-center gap-2 bg-stone-950/80 px-4 py-1.5 rounded-xl border border-amber-800/40">
+                    <i class="fa-solid fa-star text-amber-400"></i>
+                    <div class="text-center">
+                        <span class="block text-[10px] uppercase font-bold text-amber-400/80">Parejas</span>
+                        <span id="pairs-count" class="text-lg font-bold font-mono text-amber-200">0 / 8</span>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div class="flex items-center gap-2 bg-stone-950/80 px-4 py-1.5 rounded-xl border border-amber-800/40">
+                    <i class="fa-solid fa-stopwatch text-amber-500"></i>
+                    <div class="text-center">
+                        <span class="block text-[10px] uppercase font-bold text-amber-400/80">Tiempo</span>
+                        <span id="timer-display" class="text-lg font-bold font-mono text-amber-200">00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Restart Button -->
+            <button id="btn-restart" class="w-full sm:w-auto bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-stone-950 font-bold px-5 py-2 rounded-xl transition shadow-lg flex items-center justify-center gap-2 active:scale-95">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>Reiniciar</span>
+            </button>
+        </div>
+
+        <!-- Card Grid Container -->
+        <div id="game-grid" class="w-full max-w-4xl grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 gap-3 sm:gap-4 my-auto min-h-[400px]">
+            <!-- Dynamic Cards generated via JavaScript -->
+        </div>
+
+    </main>
+
+    <!-- Victory Modal -->
+    <div id="win-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-gradient-to-b from-stone-900 to-amber-950 border-2 border-amber-500 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center shadow-2xl transform scale-90 transition-transform duration-300" id="win-card">
+            <div class="w-20 h-20 mx-auto mb-4 bg-amber-500 text-stone-950 rounded-full flex items-center justify-center text-4xl border-4 border-amber-300 shadow-xl animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold font-cinzel text-amber-300 mb-2">¡Victoria Revolucionaria!</h2>
+            <p class="text-amber-100/90 text-sm mb-6">Has logrado emparejar a todos los líderes e íconos de la lucha armadas de 1910.</p>
+
+            <!-- Stats Summary -->
+            <div class="grid grid-cols-2 gap-3 bg-stone-950/80 p-4 rounded-2xl border border-amber-800/40 mb-6 text-left">
+                <div>
+                    <span class="text-xs text-amber-400/80 block uppercase font-bold">Tiempo Total</span>
+                    <span id="final-time" class="text-lg font-bold font-mono text-amber-200">00:00</span>
+                </div>
+                <div>
+                    <span class="text-xs text-amber-400/80 block uppercase font-bold">Movimientos</span>
+                    <span id="final-moves" class="text-lg font-bold font-mono text-amber-200">0</span>
+                </div>
+                <div class="col-span-2 pt-2 border-t border-stone-800 flex justify-between items-center">
+                    <span class="text-xs text-amber-400/80 block uppercase font-bold">Calificación:</span>
+                    <div id="star-rating" class="text-amber-400 text-lg">
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                        <i class="fa-solid fa-star"></i>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-play-again" class="w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-stone-950 font-extrabold py-3 rounded-xl shadow-lg transition transform active:scale-95 text-base">
+                ¡Jugar de Nuevo!
+            </button>
+        </div>
+    </div>
+
+    <!-- Codex / Character Gallery Modal -->
+    <div id="codex-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-stone-900 border-2 border-amber-600/80 rounded-3xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-amber-950 to-stone-900 p-5 border-b border-amber-700/50 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-book-bookmark text-amber-400 text-xl"></i>
+                    <h3 class="text-xl font-bold font-cinzel text-amber-300">Galería de Personajes Revolucionarios</h3>
+                </div>
+                <button id="btn-close-codex" class="text-stone-400 hover:text-amber-300 text-xl transition px-2">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <!-- Gallery Grid List -->
+            <div id="codex-list" class="p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Dynamic Character Cards populated via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Info Quick View Modal (When clicking matched card) -->
+    <div id="char-modal" class="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-gradient-to-b from-stone-900 to-amber-950 border-2 border-amber-500 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl relative">
+            <button id="btn-close-char" class="absolute top-3 right-3 text-amber-400 hover:text-white text-lg">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div id="char-modal-content">
+                <!-- Dynamic Content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full bg-stone-950 border-t border-amber-950 py-3 text-center text-xs text-amber-200/50">
+        <p>Memorama de la Revolución Mexicana &copy; 2026 — Aprendizaje e Historia</p>
+    </footer>
+
+    <script>
+        // Web Audio Synthesizer for Retro Sound Effects (No external audio file dependencies)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+            }
+
+            playFlip() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.08);
+                
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playMatch() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.06);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.25);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.06);
+                    osc.stop(now + idx * 0.06 + 0.25);
+                });
+            }
+
+            playMismatch() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            }
+
+            playWin() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                const now = this.ctx.currentTime;
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.12);
+                    gain.gain.setValueAtTime(0.25, now + i * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.12);
+                    osc.stop(now + i * 0.12 + 0.4);
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        const REVOLUTIONARIES = [
+            {
+                id: 'zapata',
+                name: 'Emiliano Zapata',
+                title: 'El Caudillo del Sur',
+                quote: '¡Tierra y Libertad!',
+                bio: 'Líder del Ejército Libertador del Sur. Promulgó el Plan de Ayala exigiendo la devolución de tierras a los campesinos.',
+                color: '#b91c1c',
+                image: 'https://upload.wikimedia.org/wikipedia/commons/9/99/Emiliano_Zapata4.jpg?utm_source=es.wikipedia.org&utm_campaign=index&utm_content=original?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'villa',
+                name: 'Pancho Villa',
+                title: 'El Centauro del Norte',
+                quote: 'La educación es el principal remedio de los males de la patria.',
+                bio: 'Comandante de la División del Norte. Hábil estratega militar que encabezó la lucha popular en el norte de México.',
+                color: '#d97706',
+                image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Pancho_Villa_bandolier_%28cropped%29.jpg/960px-Pancho_Villa_bandolier_%28cropped%29.jpg?utm_source=es.wikipedia.org&utm_campaign=index&utm_content=thumbnail?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'madero',
+                name: 'Francisco I. Madero',
+                title: 'El Apóstol de la Democracia',
+                quote: '¡Sufragio Efectivo, No Reelección!',
+                bio: 'Empresario y político que inició la Revolución con el Plan de San Luis (1910) para derrocar la dictadura porfirista.',
+                color: '#2563eb',
+                image: 'https://elceo.com/wp-content/uploads/2019/11/francisco_madero.png?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'carranza',
+                name: 'Venustiano Carranza',
+                title: 'El Primer Jefe',
+                quote: 'Para servir a la patria nunca sobra un esfuerzo.',
+                bio: 'Líder del Ejército Constitucionalista. Promulgó la Constitución Política de los Estados Unidos Mexicanos de 1917.',
+                color: '#16a34a',
+                image: 'https://upload.wikimedia.org/wikipedia/commons/c/c1/Portrait_of_Venustiano_Carranza_%28cropped%29.jpg?utm_source=es.wikipedia.org&utm_campaign=index&utm_content=original?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'obregon',
+                name: 'Álvaro Obregón',
+                title: 'El Manco de Celaya',
+                quote: 'No hay general que resista un cañonazo de 50 mil pesos.',
+                bio: 'Invicto estratega del Ejército Constitucionalista. Ocupó la presidencia de México e impulsó la reconstrucción nacional.',
+                color: '#9333ea',
+                image: 'https://upload.wikimedia.org/wikipedia/commons/a/a1/Portrait_of_%C3%81lvaro_Obreg%C3%B3n_4.jpg?utm_source=es.wikipedia.org&utm_campaign=index&utm_content=original?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'magon',
+                name: 'Ricardo Flores Magón',
+                title: 'Precursor Intelectual',
+                quote: 'La rebeldía es la vida; la sumisión es la muerte.',
+                bio: 'Periodista, ensayista y anarquista. Fundador del periódico "Regeneración" y el Partido Liberal Mexicano.',
+                color: '#ea580c',
+                image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQADygGeZiuFMpK8fgy7UfuDRlIKwV2UrOj7hlxi64UZ9O_Nf1_zWsZn6EAj8UflLO7FpW_Ow&s?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'serdan',
+                name: 'Carmen Serdán',
+                title: 'Heroína de Puebla',
+                quote: '¡Viva la libertad! ¡Abajo la tiranía!',
+                bio: 'Revolucionaria poblana que conspiró activamente junto a su hermano Aquiles Serdán y defendió su hogar armas en mano en 1910.',
+                color: '#ec4899',
+                image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT_QBouLY60qGHUIAu1XsQMGGzUjns8S8rClzmELaSQu4TWE9LX5DgbfmU&s=10?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'adelita',
+                name: 'Las Soldaderas / Adelita',
+                title: 'Mujeres Revolucionarias',
+                quote: 'Si Adelita se fuera con otro, la seguiría por tierra y por mar.',
+                bio: 'Las soldaderas fueron fundamentales en la Revolución: combatientes, enfermeras, proveedoras y sostén moral del ejército.',
+                color: '#0d9488',
+                image: 'https://www.mexicodesconocido.com.mx/wp-content/uploads/2019/01/Mujeres-Revolucio%CC%81n-Mexicana-1024x658.jpg?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'galindo',
+                name: 'Hermila Galindo',
+                title: 'Feminista y Periodista',
+                quote: 'La mujer debe ser protagonista activa del cambio histórico.',
+                bio: 'Pionera del feminismo en México, secretaria de Carranza y defensora del voto de las mujeres y la educación laica.',
+                color: '#06b6d4',
+                image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0xvqOUeaZksTJLl5fzzgkH4XrtuDrb-Sp5t2Owygbx6ceiBBVf-015hRVckJ9G-lPAG_frQ&s?w=400&auto=format&fit=crop&q=80'
+            },
+            {
+                id: 'pino_suarez',
+                name: 'José María Pino Suárez',
+                title: 'El Vicepresidente Leal',
+                quote: 'La ley debe ser siempre la brújula de la patria.',
+                bio: 'Poeta, abogado y político yucateco. Acompañó a Madero como Vicepresidente y fue martirizado durante la Decena Trágica en 1913.',
+                color: '#6366f1',
+                image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Vicepresidente_Jos%C3%A9_Mar%C3%ADa_Pino_Su%C3%A1rez_crop.jpg/250px-Vicepresidente_Jos%C3%A9_Mar%C3%ADa_Pino_Su%C3%A1rez_crop.jpg?utm_source=es.wikipedia.org&utm_campaign=parser&utm_content=thumbnail?w=400&auto=format&fit=crop&q=80'
+            }
+        ];
+
+        // Game State Variables
+        let gameState = {
+            difficulty: 'medium',
+            cards: [],
+            flippedCards: [],
+            matchedPairs: 0,
+            totalPairs: 8,
+            moves: 0,
+            timer: 0,
+            timerInterval: null,
+            isTimerRunning: false,
+            isLocked: false
+        };
+
+        // DOM Elements
+        const gameGrid = document.getElementById('game-grid');
+        const movesCountEl = document.getElementById('moves-count');
+        const pairsCountEl = document.getElementById('pairs-count');
+        const timerDisplayEl = document.getElementById('timer-display');
+        const btnRestart = document.getElementById('btn-restart');
+        const btnCodex = document.getElementById('btn-codex');
+        const btnSound = document.getElementById('btn-sound');
+        const soundIcon = document.getElementById('sound-icon');
+        const diffButtons = document.querySelectorAll('.diff-btn');
+
+        const winModal = document.getElementById('win-modal');
+        const winCard = document.getElementById('win-card');
+        const btnPlayAgain = document.getElementById('btn-play-again');
+
+        const codexModal = document.getElementById('codex-modal');
+        const codexList = document.getElementById('codex-list');
+        const btnCloseCodex = document.getElementById('btn-close-codex');
+
+        const charModal = document.getElementById('char-modal');
+        const charModalContent = document.getElementById('char-modal-content');
+        const btnCloseChar = document.getElementById('btn-close-char');
+
+        // Initialize Game
+        function initGame() {
+            clearInterval(gameState.timerInterval);
+            gameState.timer = 0;
+            gameState.isTimerRunning = false;
+            gameState.moves = 0;
+            gameState.matchedPairs = 0;
+            gameState.flippedCards = [];
+            gameState.isLocked = false;
+
+            if (gameState.difficulty === 'easy') gameState.totalPairs = 6;
+            else if (gameState.difficulty === 'medium') gameState.totalPairs = 8;
+            else if (gameState.difficulty === 'hard') gameState.totalPairs = 10;
+
+            movesCountEl.textContent = '0';
+            pairsCountEl.textContent = `0 / ${gameState.totalPairs}`;
+            timerDisplayEl.textContent = '00:00';
+
+            const selectedChars = REVOLUTIONARIES.slice(0, gameState.totalPairs);
+            let deck = [];
+            selectedChars.forEach(char => {
+                deck.push({ ...char, uniqueId: char.id + '_1' });
+                deck.push({ ...char, uniqueId: char.id + '_2' });
+            });
+
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+
+            gameState.cards = deck;
+
+            gameGrid.className = 'w-full max-w-4xl grid gap-3 sm:gap-4 my-auto min-h-[400px] ';
+            if (gameState.totalPairs === 6) {
+                gameGrid.className += 'grid-cols-3 sm:grid-cols-4';
+            } else if (gameState.totalPairs === 8) {
+                gameGrid.className += 'grid-cols-3 sm:grid-cols-4';
+            } else {
+                gameGrid.className += 'grid-cols-4 sm:grid-cols-5';
+            }
+
+            renderGrid();
+        }
+
+        function renderGrid() {
+            gameGrid.innerHTML = '';
+            gameState.cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card-perspective aspect-[3/4] w-full';
+                cardEl.innerHTML = `
+                    <div class="card-inner" data-id="${card.id}" data-index="${index}">
+                        <!-- Card Back -->
+                        <div class="card-back">
+                            <div class="w-10 h-10 rounded-full bg-amber-900/40 border border-amber-600/50 flex items-center justify-center text-amber-500 font-bold text-lg">
+                                <i class="fa-solid fa-hat-cowboy"></i>
+                            </div>
+                            <span class="text-[10px] font-bold text-amber-500/80 uppercase tracking-widest mt-2 font-cinzel">1910</span>
+                        </div>
+                        <!-- Card Front -->
+                        <div class="card-front p-2 flex flex-col justify-between">
+                            <div class="w-full h-3/4 flex items-center justify-center overflow-hidden rounded-lg bg-stone-900 border border-amber-600/30">
+                                <img src="${card.image}" alt="${card.name}" class="w-full h-full object-cover rounded-md transform hover:scale-105 transition duration-300" onerror="this.onerror=null; this.src='https://placehold.co/300x400/3b1d11/fef3c7?text=${encodeURIComponent(card.name)}';">
+                            </div>
+                            <div class="w-full h-1/4 flex flex-col justify-center items-center text-center px-1 pt-1 border-t border-amber-300/40">
+                                <span class="text-xs font-bold leading-tight line-clamp-1 text-stone-900 font-cinzel">${card.name}</span>
+                                <span class="text-[10px] text-amber-900 font-semibold line-clamp-1 opacity-80">${card.title}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                cardEl.addEventListener('click', () => handleCardClick(index));
+                gameGrid.appendChild(cardEl);
+            });
+        }
+
+        function startTimer() {
+            if (gameState.isTimerRunning) return;
+            gameState.isTimerRunning = true;
+            gameState.timerInterval = setInterval(() => {
+                gameState.timer++;
+                const mins = String(Math.floor(gameState.timer / 60)).padStart(2, '0');
+                const secs = String(gameState.timer % 60).padStart(2, '0');
+                timerDisplayEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function handleCardClick(index) {
+            if (gameState.isLocked) return;
+
+            const cardInner = gameGrid.children[index].querySelector('.card-inner');
+            
+            if (cardInner.classList.contains('is-flipped') || cardInner.classList.contains('is-matched')) {
+                if (cardInner.classList.contains('is-matched')) {
+                    showCharacterModal(gameState.cards[index]);
+                }
+                return;
+            }
+
+            startTimer();
+
+            cardInner.classList.add('is-flipped');
+            sound.playFlip();
+
+            gameState.flippedCards.push({ index, card: gameState.cards[index], element: cardInner });
+
+            if (gameState.flippedCards.length === 2) {
+                gameState.moves++;
+                movesCountEl.textContent = gameState.moves;
+                gameState.isLocked = true;
+
+                const [first, second] = gameState.flippedCards;
+
+                if (first.card.id === second.card.id) {
+                    setTimeout(() => {
+                        first.element.classList.add('is-matched');
+                        second.element.classList.add('is-matched');
+                        sound.playMatch();
+                        
+                        gameState.matchedPairs++;
+                        pairsCountEl.textContent = `${gameState.matchedPairs} / ${gameState.totalPairs}`;
+                        gameState.flippedCards = [];
+                        gameState.isLocked = false;
+
+                        if (gameState.matchedPairs === gameState.totalPairs) {
+                            handleWin();
+                        }
+                    }, 400);
+                } else {
+                    setTimeout(() => {
+                        first.element.classList.remove('is-flipped');
+                        second.element.classList.remove('is-flipped');
+                        sound.playMismatch();
+                        gameState.flippedCards = [];
+                        gameState.isLocked = false;
+                    }, 1000);
+                }
+            }
+        }
+
+        function handleWin() {
+            clearInterval(gameState.timerInterval);
+            gameState.isTimerRunning = false;
+
+            sound.playWin();
+
+            confetti({
+                particleCount: 120,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            const mins = String(Math.floor(gameState.timer / 60)).padStart(2, '0');
+            const secs = String(gameState.timer % 60).padStart(2, '0');
+            document.getElementById('final-time').textContent = `${mins}:${secs}`;
+            document.getElementById('final-moves').textContent = gameState.moves;
+
+            const minMoves = gameState.totalPairs;
+            const starContainer = document.getElementById('star-rating');
+            if (gameState.moves <= minMoves * 1.5) {
+                starContainer.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>';
+            } else if (gameState.moves <= minMoves * 2.2) {
+                starContainer.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i>';
+            } else {
+                starContainer.innerHTML = '<i class="fa-solid fa-star"></i><i class="fa-regular fa-star"></i><i class="fa-regular fa-star"></i>';
+            }
+
+            setTimeout(() => {
+                winModal.classList.remove('opacity-0', 'pointer-events-none');
+                winCard.classList.remove('scale-90');
+                winCard.classList.add('scale-100');
+            }, 600);
+        }
+
+        function showCharacterModal(character) {
+            charModalContent.innerHTML = `
+                <div class="w-28 h-28 mx-auto mb-3 overflow-hidden rounded-2xl border-2 border-amber-500 shadow-lg">
+                    <img src="${character.image}" alt="${character.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://placehold.co/300x300/3b1d11/fef3c7?text=${encodeURIComponent(character.name)}';">
+                </div>
+                <h3 class="text-xl font-bold font-cinzel text-amber-300">${character.name}</h3>
+                <p class="text-xs font-semibold text-amber-500 uppercase tracking-wider mb-2">${character.title}</p>
+                <div class="bg-stone-950/80 p-3 rounded-xl border border-amber-900/50 mb-3 text-xs italic text-amber-100/90">
+                    "${character.quote}"
+                </div>
+                <p class="text-xs text-amber-100/80 text-left leading-relaxed">${character.bio}</p>
+            `;
+            charModal.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function populateCodex() {
+            codexList.innerHTML = '';
+            REVOLUTIONARIES.forEach(char => {
+                const item = document.createElement('div');
+                item.className = 'bg-stone-950 p-4 rounded-2xl border border-amber-800/40 flex items-start gap-4 hover:border-amber-500/80 transition shadow';
+                item.innerHTML = `
+                    <div class="w-20 h-20 flex-shrink-0 overflow-hidden rounded-xl border border-amber-600/50 shadow">
+                        <img src="${char.image}" alt="${char.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='https://placehold.co/300x300/3b1d11/fef3c7?text=${encodeURIComponent(char.name)}';">
+                    </div>
+                    <div class="flex-grow">
+                        <h4 class="text-base font-bold font-cinzel text-amber-300">${char.name}</h4>
+                        <span class="text-[11px] font-semibold text-amber-500/90 uppercase tracking-wider block mb-1">${char.title}</span>
+                        <p class="text-xs text-amber-100/80 leading-snug mb-2">${char.bio}</p>
+                        <span class="text-[11px] italic text-amber-400/90 block">"${char.quote}"</span>
+                    </div>
+                `;
+                codexList.appendChild(item);
+            });
+        }
+
+        btnRestart.addEventListener('click', () => {
+            sound.playFlip();
+            initGame();
+        });
+
+        btnPlayAgain.addEventListener('click', () => {
+            winModal.classList.add('opacity-0', 'pointer-events-none');
+            initGame();
+        });
+
+        diffButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                diffButtons.forEach(b => {
+                    b.classList.remove('bg-amber-600', 'text-stone-950', 'shadow');
+                    b.classList.add('text-amber-200');
+                });
+                btn.classList.add('bg-amber-600', 'text-stone-950', 'shadow');
+                btn.classList.remove('text-amber-200');
+
+                gameState.difficulty = btn.dataset.diff;
+                initGame();
+            });
+        });
+
+        btnSound.addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            if (sound.enabled) {
+                soundIcon.className = 'fa-solid fa-volume-high';
+                btnSound.classList.remove('text-stone-500');
+                btnSound.classList.add('text-amber-300');
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-xmark';
+                btnSound.classList.remove('text-amber-300');
+                btnSound.classList.add('text-stone-500');
+            }
+        });
+
+        btnCodex.addEventListener('click', () => {
+            populateCodex();
+            codexModal.classList.remove('opacity-0', 'pointer-events-none');
+        });
+        btnCloseCodex.addEventListener('click', () => {
+            codexModal.classList.add('opacity-0', 'pointer-events-none');
+        });
+
+        btnCloseChar.addEventListener('click', () => {
+            charModal.classList.add('opacity-0', 'pointer-events-none');
+        });
+
+        [winModal, codexModal, charModal].forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('opacity-0', 'pointer-events-none');
+                }
+            });
+        });
+
+        window.addEventListener('load', () => {
+            initGame();
+        });
+    </script>
+</body>
+</html>
